@@ -1145,7 +1145,8 @@ function importData(input) {
         alert('✅ Saves loaded to Cloud!');
       }
     } catch(err) {
-      alert('❌ Bad file format or cloud error.');
+      alert('Error: ' + err.message);
+      console.error(err);
     }
     input.value = ''; // reset
   };

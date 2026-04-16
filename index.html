@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<head>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
-<meta charset="UTF-8">
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+  <meta charset="UTF-8">  
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CAT Prep Platform</title>
 <script>
@@ -496,6 +497,7 @@ code { background: #e8eaf6; padding: 1px 5px; border-radius: 3px; font-size: 11p
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 // ===================== FIREBASE CLOUD =====================
+// ===================== FIREBASE CLOUD =====================
 const firebaseConfig = {
   apiKey: "AIzaSyDxI7mzmbvEgUI-48GWVa_8d0UaysCKtCc",
   authDomain: "cat-cloud-f3194.firebaseapp.com",
@@ -507,6 +509,8 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+
+// ===================== STATE =====================
 let state = {};
 let parsedQs = [];
 
@@ -1147,6 +1151,23 @@ function importData(input) {
     input.value = ''; // reset
   };
   reader.readAsText(file);
+}
+
+function toggleQDetail(idx) {
+  // close all other open boxes
+  document.querySelectorAll('.q-detail-row').forEach(el => {
+    if (el.id !== `q-detail-${idx}`) el.classList.remove('open');
+  });
+  
+  // open or close clicked box
+  const target = document.getElementById(`q-detail-${idx}`);
+  if(target) {
+    target.classList.toggle('open');
+    // wake up math drawing if open
+    if (target.classList.contains('open')) {
+      setTimeout(renderMath, 50);
+    }
+  }
 }
 
 // ===================== INIT =====================

@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CAT Prep Platform</title>
@@ -308,8 +311,13 @@ code { background: #e8eaf6; padding: 1px 5px; border-radius: 3px; font-size: 11p
   </div>
   <div class="home-body">
     <div class="home-actions">
-      <button class="big-btn big-btn-primary" onclick="showSetup()">➕ New Exam</button>
-    </div>
+      <button class="big-btn big-btn-primary" onclick="showSetup()">➕ New Exam</button>
+      <button class="big-btn btn-grey" onclick="exportData()">⬇️ Export Saves</button>
+      <label class="big-btn btn-grey" style="cursor:pointer; display:inline-block;">
+        ⬆️ Import Saves
+        <input type="file" accept=".json" style="display:none;" onchange="importData(this)">
+      </label>
+    </div>
     <div class="section-title">Past Attempts</div>
     <div id="attempts-container"></div>
   </div>
@@ -487,6 +495,20 @@ code { background: #e8eaf6; padding: 1px 5px; border-radius: 3px; font-size: 11p
 <script>
 // ===================== PDF.js =====================
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDxI7mzmbvEgUI-48GWVa_8d0UaysCKtCc",
+  authDomain: "cat-cloud-f3194.firebaseapp.com",
+  projectId: "cat-cloud-f3194",
+  storageBucket: "cat-cloud-f3194.firebasestorage.app",
+  messagingSenderId: "279015700085",
+  appId: "1:279015700085:web:1769e881fad5b76243ea3c",
+  measurementId: "G-PWRMCJ8K98"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 
 // ===================== STATE =====================
 let examCfg = { name:'', totalTime:7200, sections:[], questions:[], answerKey:{} };
@@ -1042,86 +1064,73 @@ function fmtTime(s) {
 }
 
 // ===================== LOCALSTORAGE =====================
-function saveAttempt(attempt) {
-  const arr = getAttempts();
-  arr.unshift(attempt);
-  try { localStorage.setItem('cat_prep_attempts', JSON.stringify(arr.slice(0, 25))); } catch(e) {}
+// ===================== CLOUD STORAGE =====================
+async function saveAttempt(attempt) {
+  try {
+    await db.collection("attempts").doc(String(attempt.id)).set(attempt);
+  } catch(e) { console.log("Cloud fail: ", e); }
 }
 
-function getAttempts() {
-  try { return JSON.parse(localStorage.getItem('cat_prep_attempts') || '[]'); } catch { return []; }
-}
-
-function deleteAttempt(id, e) {
+async function deleteAttempt(id, e) {
   e.stopPropagation();
-  const arr = getAttempts().filter(a => a.id !== id);
-  try { localStorage.setItem('cat_prep_attempts', JSON.stringify(arr)); } catch {}
-  renderAttempts();
+  try {
+    await db.collection("attempts").doc(String(id)).delete();
+    renderAttempts();
+  } catch(e) { console.log("Delete fail: ", e); }
 }
 
-function renderAttempts() {
+async function renderAttempts() {
   const cont = document.getElementById('attempts-container');
-  const arr = getAttempts();
-  if (arr.length === 0) {
-    cont.innerHTML = '<div class="no-attempts"><div>📋</div><div style="font-weight:bold;margin-bottom:4px;">No attempts yet</div><div style="font-size:12px;">Start a new exam to begin tracking your progress</div></div>';
-    return;
-  }
-  cont.innerHTML = '<div class="attempts-grid">' + arr.map(a => {
-    const hasKey = Object.keys(a.answerKey||{}).length > 0;
-    let score = '—', scoreColor = 'var(--blue)';
-    if (hasKey) {
-      let s = 0;
-      a.questions.forEach((q,i) => {
-        const ans = a.answers[i], key = a.answerKey[q.num];
-        if (ans && key) {
-          if (String(ans).trim().toUpperCase() === String(key).trim().toUpperCase()) s += 3;
-          else s -= 1;
-        }
-      });
-      score = s + ' pts'; scoreColor = s >= 0 ? '#2e7d32' : '#c62828';
-    } else {
-      score = Object.keys(a.answers||{}).length + ' attempted';
+  cont.innerHTML = '<div>⏳ Fetching from cloud...</div>';
+
+  try {
+    const snap = await db.collection("attempts").orderBy("id", "desc").get();
+    const arr = [];
+    snap.forEach(doc => arr.push(doc.data()));
+
+    if (arr.length === 0) {
+      cont.innerHTML = '<div class="no-attempts"><div>☁️</div><div style="font-weight:bold;margin-bottom:4px;">No cloud attempts yet</div><div style="font-size:12px;">Start a new exam to save to cloud</div></div>';
+      return;
     }
-    return `<div class="attempt-card" onclick="loadAttempt(${a.id})">
-      <button class="attempt-del" onclick="deleteAttempt(${a.id},event)" title="Delete">✕</button>
-      <div class="attempt-name">${a.name}</div>
-      <div class="attempt-date">${a.date}</div>
-      <div class="attempt-score" style="color:${scoreColor}">${score}</div>
-      <div class="attempt-meta">${a.questions.length} questions · ${fmtTime(a.elapsed)}</div>
-    </div>`;
-  }).join('') + '</div>';
+
+    cont.innerHTML = '<div class="attempts-grid">' + arr.map(a => {
+      const hasKey = Object.keys(a.answerKey||{}).length > 0;
+      let score = '—', scoreColor = 'var(--blue)';
+      if (hasKey) {
+        let s = 0;
+        a.questions.forEach((q,i) => {
+          const ans = a.answers[i], key = a.answerKey[q.num];
+          if (ans && key) {
+            if (String(ans).trim().toUpperCase() === String(key).trim().toUpperCase()) s += 3;
+            else s -= 1;
+          }
+        });
+        score = s + ' pts'; scoreColor = s >= 0 ? '#2e7d32' : '#c62828';
+      } else {
+        score = Object.keys(a.answers||{}).length + ' attempted';
+      }
+      return `<div class="attempt-card" onclick="loadAttemptFromCloud('${a.id}')">
+        <button class="attempt-del" onclick="deleteAttempt('${a.id}',event)" title="Delete">✕</button>
+        <div class="attempt-name">${a.name}</div>
+        <div class="attempt-date">${a.date}</div>
+        <div class="attempt-score" style="color:${scoreColor}">${score}</div>
+        <div class="attempt-meta">${a.questions.length} questions · ${fmtTime(a.elapsed)}</div>
+      </div>`;
+    }).join('') + '</div>';
+
+  } catch(e) {
+    cont.innerHTML = '<div style="color:red;">❌ Cloud broken. Check Firebase keys.</div>';
+  }
 }
 
-function loadAttempt(id) {
-  const a = getAttempts().find(x => x.id === id);
-  if (a) showResults(a);
-}
-
-// ===================== SETUP STATUS =====================
-function setStatus(msg, type) {
-  const el = document.getElementById('setup-status');
-  el.textContent = msg;
-  el.className = `status-msg ${type}`;
-  el.style.display = 'block';
-  if (type !== 'info') setTimeout(() => el.style.display = 'none', 5000);
+async function loadAttemptFromCloud(id) {
+  try {
+    const doc = await db.collection("attempts").doc(String(id)).get();
+    if (doc.exists) showResults(doc.data());
+  } catch(e) { console.log("Load fail", e); }
 }
 
 // ===================== INIT =====================
-function toggleQDetail(idx) {
-  // close all other open boxes
-  document.querySelectorAll('.q-detail-row').forEach(el => {
-    if (el.id !== `q-detail-${idx}`) el.classList.remove('open');
-  });
-  
-  // open or close clicked box
-  const target = document.getElementById(`q-detail-${idx}`);
-  target.classList.toggle('open');
-  
-  // wake up math drawing if open
-  if (target.classList.contains('open')) {
-    setTimeout(renderMath, 50);
-  }
-}
 renderAttempts();
 </script>
 </body>

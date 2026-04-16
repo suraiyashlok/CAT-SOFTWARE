@@ -311,13 +311,12 @@ code { background: #e8eaf6; padding: 1px 5px; border-radius: 3px; font-size: 11p
   </div>
   <div class="home-body">
     <div class="home-actions">
-      <button class="big-btn big-btn-primary" onclick="showSetup()">➕ New Exam</button>
-      <button class="big-btn btn-grey" onclick="exportData()">⬇️ Export Saves</button>
-      <label class="big-btn btn-grey" style="cursor:pointer; display:inline-block;">
-        ⬆️ Import Saves
+      <button class="big-btn big-btn-primary" onclick="showSetup()">➕ New Exam</button>
+      <label class="big-btn btn-grey" style="cursor:pointer; display:inline-block; margin-left: 8px;">
+        ⬆️ Import Saves to Cloud
         <input type="file" accept=".json" style="display:none;" onchange="importData(this)">
       </label>
-    </div>
+    </div>
     <div class="section-title">Past Attempts</div>
     <div id="attempts-container"></div>
   </div>
@@ -1128,6 +1127,29 @@ async function loadAttemptFromCloud(id) {
     const doc = await db.collection("attempts").doc(String(id)).get();
     if (doc.exists) showResults(doc.data());
   } catch(e) { console.log("Load fail", e); }
+}
+
+function importData(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      const arr = JSON.parse(e.target.result);
+      if (Array.isArray(arr)) {
+        alert('☁️ Uploading to cloud... Click OK and wait a few seconds.');
+        for (const a of arr) {
+          await db.collection("attempts").doc(String(a.id)).set(a);
+        }
+        renderAttempts();
+        alert('✅ Saves loaded to Cloud!');
+      }
+    } catch(err) {
+      alert('❌ Bad file format or cloud error.');
+    }
+    input.value = ''; // reset
+  };
+  reader.readAsText(file);
 }
 
 // ===================== INIT =====================

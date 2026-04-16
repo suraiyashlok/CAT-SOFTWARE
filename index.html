@@ -495,6 +495,7 @@ code { background: #e8eaf6; padding: 1px 5px; border-radius: 3px; font-size: 11p
 // ===================== PDF.js =====================
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
+// ===================== FIREBASE CLOUD =====================
 const firebaseConfig = {
   apiKey: "AIzaSyDxI7mzmbvEgUI-48GWVa_8d0UaysCKtCc",
   authDomain: "cat-cloud-f3194.firebaseapp.com",
@@ -504,13 +505,8 @@ const firebaseConfig = {
   appId: "1:279015700085:web:1769e881fad5b76243ea3c",
   measurementId: "G-PWRMCJ8K98"
 };
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-
-// ===================== STATE =====================
-let examCfg = { name:'', totalTime:7200, sections:[], questions:[], answerKey:{} };
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 let state = {};
 let parsedQs = [];
 

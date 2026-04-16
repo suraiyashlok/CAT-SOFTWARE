@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CAT Prep Platform</title>
+<script>
+  MathJax = {
+    tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] }
+  };
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --blue: #1a237e;
+  --blue-mid: #283593;
+  --blue-light: #3949ab;
+  --accent: #e65100;
+  --bg: #eceff1;
+  --white: #ffffff;
+  --border: #c5cae9;
+  --text: #212121;
+  --grey: #78909c;
+  --not-visited: #9e9e9e;
+  --visited: #ef5350;
+  --answered: #43a047;
+  --marked: #8e24aa;
+  --answered-marked: #1976d2;
+}
+
+body { font-family: Arial, sans-serif; font-size: 14px; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
+
+.screen { display: none; height: 100vh; flex-direction: column; }
+.screen.active { display: flex; }
+
+/* ======================== HEADER ======================== */
+.exam-header {
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-mid) 100%);
+  color: white; padding: 8px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0; border-bottom: 3px solid var(--accent);
+}
+.exam-header .title { font-size: 15px; font-weight: bold; }
+.exam-header .subtitle { font-size: 11px; color: #90caf9; }
+.timer-box {
+  background: #fff8e1; color: #212121;
+  padding: 5px 14px; font-size: 20px; font-weight: bold;
+  border-radius: 4px; font-family: 'Courier New', monospace;
+  border: 2px solid #ffc107; min-width: 110px; text-align: center;
+}
+.timer-box.warning { background: #ffebee; color: #c62828; border-color: #f44336; animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.7; } }
+
+/* ======================== SECTION TABS ======================== */
+.section-tabs {
+  background: var(--blue-mid); display: flex; gap: 0;
+  padding: 0 8px; flex-shrink: 0; overflow-x: auto;
+}
+.section-tab {
+  padding: 9px 22px; color: #90caf9; cursor: pointer;
+  border-bottom: 3px solid transparent; font-size: 13px;
+  user-select: none; white-space: nowrap; transition: all 0.15s;
+}
+.section-tab.active { color: white; border-bottom: 3px solid #ffeb3b; font-weight: bold; }
+.section-tab:hover:not(.active) { color: white; background: rgba(255,255,255,0.1); }
+
+/* ======================== EXAM BODY ======================== */
+.exam-body { display: flex; flex: 1; overflow: hidden; }
+
+.question-panel {
+  flex: 1; display: flex; flex-direction: column;
+  background: white; border-right: 2px solid var(--border);
+  overflow-y: auto;
+}
+.q-top-bar {
+  background: #e8eaf6; padding: 8px 16px;
+  font-size: 12px; color: var(--blue); font-weight: bold;
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.q-type-badge {
+  background: var(--blue); color: white;
+  padding: 2px 8px; border-radius: 10px; font-size: 11px;
+}
+.q-type-badge.tita { background: #e65100; }
+
+.q-content { padding: 16px; flex: 1; }
+.q-text { font-size: 15px; line-height: 1.75; margin-bottom: 20px; white-space: pre-wrap; }
+
+.options-list { list-style: none; }
+.option-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 11px 14px; margin-bottom: 8px;
+  border: 1.5px solid var(--border); border-radius: 4px;
+  cursor: pointer; transition: all 0.15s;
+}
+.option-item:hover { background: #e8eaf6; border-color: var(--blue-light); }
+.option-item.selected { background: #e3f2fd; border-color: #1976d2; }
+.option-item.selected .option-label { color: #1565c0; }
+.option-label { font-weight: bold; min-width: 24px; color: var(--blue-light); }
+
+.tita-wrap { margin-top: 8px; }
+.tita-wrap label { display: block; font-size: 12px; color: var(--grey); margin-bottom: 6px; }
+.tita-input {
+  width: 220px; padding: 10px; border: 2px solid var(--border);
+  border-radius: 4px; font-size: 16px; outline: none;
+}
+.tita-input:focus { border-color: var(--blue-light); }
+
+.action-bar {
+  display: flex; gap: 8px; padding: 12px 16px;
+  border-top: 2px solid var(--border); flex-shrink: 0; flex-wrap: wrap;
+  background: #fafafa;
+}
+.nav-btns { display: flex; gap: 8px; margin-left: auto; }
+
+.btn {
+  padding: 8px 16px; border: none; border-radius: 4px;
+  cursor: pointer; font-size: 13px; font-weight: bold; transition: all 0.15s;
+}
+.btn:hover { filter: brightness(0.9); transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+.btn-green { background: #43a047; color: white; }
+.btn-purple { background: #8e24aa; color: white; }
+.btn-grey { background: #78909c; color: white; }
+.btn-blue { background: var(--blue-light); color: white; }
+.btn-red { background: #e53935; color: white; }
+.btn-orange { background: var(--accent); color: white; }
+
+/* ======================== PALETTE ======================== */
+.palette-panel {
+  width: 240px; background: white; display: flex;
+  flex-direction: column; overflow-y: auto; flex-shrink: 0;
+}
+.palette-header {
+  background: var(--blue); color: white;
+  padding: 9px 12px; font-size: 13px; font-weight: bold; flex-shrink: 0;
+}
+.palette-legend {
+  padding: 8px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; margin-bottom: 3px; color: var(--grey); }
+.legend-dot { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; }
+.palette-grid { padding: 8px; display: flex; flex-wrap: wrap; gap: 4px; align-content: flex-start; flex: 1; }
+.q-btn {
+  width: 36px; height: 36px; border: none; border-radius: 50%;
+  font-size: 12px; font-weight: bold; cursor: pointer; color: white;
+  transition: transform 0.1s; position: relative;
+}
+.q-btn:hover { transform: scale(1.12); }
+.q-btn.current { box-shadow: 0 0 0 3px #ffeb3b, 0 0 0 5px #e65100; }
+.q-btn.not-visited { background: var(--not-visited); }
+.q-btn.visited { background: var(--visited); }
+.q-btn.answered { background: var(--answered); }
+.q-btn.marked { background: var(--marked); }
+.q-btn.answered-marked { background: var(--answered-marked); }
+.submit-section-btn {
+  margin: 8px; padding: 10px; background: var(--accent);
+  color: white; border: none; font-weight: bold; cursor: pointer;
+  border-radius: 4px; width: calc(100% - 16px); font-size: 13px;
+}
+.submit-section-btn:hover { background: #bf360c; }
+
+/* ======================== HOME ======================== */
+#home-screen { overflow-y: auto; }
+.home-header {
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-light) 100%);
+  color: white; padding: 24px 28px; border-bottom: 3px solid var(--accent);
+}
+.home-header h1 { font-size: 26px; font-weight: bold; letter-spacing: -0.5px; }
+.home-header p { font-size: 13px; color: #90caf9; margin-top: 4px; }
+.home-body { max-width: 960px; margin: 24px auto; padding: 0 16px; }
+.home-actions { display: flex; gap: 12px; margin-bottom: 24px; }
+.big-btn { padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.2s; }
+.big-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+.big-btn-primary { background: var(--blue); color: white; }
+.big-btn-danger { background: #e53935; color: white; }
+.section-title { font-size: 14px; font-weight: bold; color: var(--blue); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+.attempts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.attempt-card {
+  background: white; border-radius: 8px; padding: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08); cursor: pointer;
+  transition: all 0.2s; border-left: 4px solid var(--blue);
+  position: relative;
+}
+.attempt-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
+.attempt-name { font-weight: bold; font-size: 15px; color: var(--blue); margin-bottom: 3px; }
+.attempt-date { font-size: 11px; color: var(--grey); margin-bottom: 10px; }
+.attempt-score { font-size: 26px; font-weight: bold; }
+.attempt-meta { font-size: 12px; color: var(--grey); margin-top: 4px; }
+.attempt-del { position: absolute; top: 10px; right: 10px; background: none; border: none; cursor: pointer; color: #ccc; font-size: 16px; }
+.attempt-del:hover { color: #e53935; }
+.no-attempts { text-align: center; padding: 48px 24px; color: var(--grey); background: white; border-radius: 8px; }
+.no-attempts div:first-child { font-size: 40px; margin-bottom: 8px; }
+
+/* ======================== SETUP ======================== */
+#setup-screen { overflow: hidden; }
+.setup-header {
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-mid) 100%);
+  color: white; padding: 12px 20px; display: flex; align-items: center; gap: 12px;
+  flex-shrink: 0; border-bottom: 3px solid var(--accent);
+}
+.setup-header span:nth-child(2) { font-size: 16px; font-weight: bold; }
+.back-btn { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 5px 12px; border-radius: 4px; cursor: pointer; margin-left: auto; font-size: 13px; }
+.back-btn:hover { background: rgba(255,255,255,0.3); }
+.setup-scroll { overflow-y: auto; flex: 1; }
+.setup-body { max-width: 960px; margin: 20px auto; padding: 0 16px 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.setup-card { background: white; border-radius: 8px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.setup-card.full { grid-column: 1 / -1; }
+.setup-card h3 {
+  font-size: 12px; font-weight: bold; color: var(--blue);
+  text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px;
+  padding-bottom: 8px; border-bottom: 2px solid var(--border);
+}
+label { font-size: 12px; color: var(--grey); display: block; margin-bottom: 4px; }
+input[type="text"], input[type="number"] {
+  padding: 8px 10px; border: 1.5px solid var(--border); border-radius: 4px;
+  font-size: 13px; outline: none; width: 100%; margin-bottom: 10px;
+}
+input[type="text"]:focus, input[type="number"]:focus { border-color: var(--blue-light); }
+textarea {
+  width: 100%; border: 1.5px solid var(--border); border-radius: 4px;
+  padding: 10px; font-family: 'Courier New', monospace; font-size: 12px;
+  resize: vertical; outline: none; line-height: 1.5;
+}
+textarea:focus { border-color: var(--blue-light); }
+.file-drop {
+  border: 2px dashed #b0bec5; border-radius: 8px; padding: 24px;
+  text-align: center; cursor: pointer; color: var(--grey); transition: all 0.2s;
+}
+.file-drop:hover, .file-drop.drag-over { border-color: var(--blue-light); background: #e8eaf6; color: var(--blue); }
+.file-drop input { display: none; }
+.section-row { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
+.section-row label { min-width: 70px; margin: 0; font-size: 12px; }
+.section-row input[type="number"] { width: 64px; margin: 0; }
+.section-row input[type="text"] { width: 100px; margin: 0; }
+.section-row small { font-size: 10px; color: var(--grey); }
+.start-btn {
+  grid-column: 1 / -1; padding: 14px;
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-light) 100%);
+  color: white; border: none; border-radius: 8px; font-size: 16px;
+  font-weight: bold; cursor: pointer; letter-spacing: 1px; transition: all 0.2s;
+}
+.start-btn:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(26,35,126,0.4); }
+.status-msg { grid-column: 1 / -1; padding: 10px; border-radius: 4px; font-size: 13px; text-align: center; display: none; }
+.status-msg.success { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+.status-msg.error { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+.status-msg.info { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
+
+/* ======================== RESULTS ======================== */
+#results-screen { overflow-y: auto; }
+.results-header {
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-mid) 100%);
+  color: white; padding: 12px 24px; display: flex; justify-content: space-between;
+  align-items: center; flex-shrink: 0; border-bottom: 3px solid var(--accent);
+}
+.results-body { max-width: 1040px; margin: 20px auto; padding: 0 16px 32px; }
+.score-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.score-card { background: white; border-radius: 8px; padding: 16px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.score-card .lbl { font-size: 11px; color: var(--grey); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.score-card .val { font-size: 30px; font-weight: bold; color: var(--blue); }
+.score-card .sub { font-size: 11px; color: var(--grey); }
+.res-section { background: white; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.res-section h3 { font-size: 12px; font-weight: bold; color: var(--blue); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { background: #e8eaf6; padding: 9px 12px; text-align: left; font-weight: bold; color: var(--blue); border-bottom: 2px solid var(--border); }
+td { padding: 8px 12px; border-bottom: 1px solid #f5f5f5; vertical-align: middle; }
+tr:hover td { background: #fafafa; }
+.c-correct { color: #2e7d32; font-weight: bold; }
+.c-wrong { color: #c62828; font-weight: bold; }
+.c-skip { color: var(--grey); }
+.bar-wrap { height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden; width: 80px; }
+.bar-fill { height: 100%; border-radius: 4px; background: var(--blue-light); }
+.clickable-row { cursor: pointer; transition: background 0.2s; }
+.clickable-row:hover { background: #e8eaf6 !important; }
+.q-detail-row { display: none; background: #fafafa; }
+.q-detail-row.open { display: table-row; }
+.q-detail-box { padding: 16px; border: 1px solid var(--border); border-radius: 6px; margin: 4px 0; white-space: pre-wrap; }
+/* ======================== DIALOG ======================== */
+.dialog-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center; z-index: 1000; display: none;
+}
+.dialog-box { background: white; border-radius: 10px; padding: 28px; max-width: 420px; width: 90%; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+.dialog-box h3 { font-size: 18px; margin-bottom: 10px; color: var(--blue); }
+.dialog-box p { color: var(--grey); margin-bottom: 22px; font-size: 14px; line-height: 1.5; }
+.dialog-btns { display: flex; gap: 10px; justify-content: center; }
+
+/* ======================== SCROLLBAR ======================== */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f0f0f0; }
+::-webkit-scrollbar-thumb { background: #b0bec5; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #78909c; }
+
+code { background: #e8eaf6; padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<!-- ==================== HOME ==================== -->
+<div id="home-screen" class="screen active">
+  <div class="home-header">
+    <h1>🎯 CAT Prep Platform</h1>
+    <p>Practice like it's the actual exam · Attempts saved locally</p>
+  </div>
+  <div class="home-body">
+    <div class="home-actions">
+      <button class="big-btn big-btn-primary" onclick="showSetup()">➕ New Exam</button>
+    </div>
+    <div class="section-title">Past Attempts</div>
+    <div id="attempts-container"></div>
+  </div>
+</div>
+
+<!-- ==================== SETUP ==================== -->
+<div id="setup-screen" class="screen">
+  <div class="setup-header">
+    <span>🎯</span>
+    <span>New Exam Setup</span>
+    <button class="back-btn" onclick="showHome()">← Back</button>
+  </div>
+  <div class="setup-scroll">
+  <div class="setup-body">
+
+    <!-- Config -->
+    <div class="setup-card">
+      <h3>Exam Configuration</h3>
+      <label>Exam Name</label>
+      <input type="text" id="exam-name" value="CAT Mock Test 1">
+      <label>Total Time (minutes)</label>
+      <input type="number" id="exam-time" value="120" min="1" max="360">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+        <input type="checkbox" id="use-sections" onchange="toggleSections(this)">
+        <span>Split into Sections (VARC / DILR / QA)</span>
+      </label>
+      <div id="sections-config" style="display:none;margin-top:12px;">
+        <div style="display:grid;grid-template-columns:100px 80px 70px 60px;gap:4px;margin-bottom:6px;font-size:11px;color:var(--grey);font-weight:bold;padding:0 2px;">
+          <span>Section Name</span><span>Questions</span><span>Minutes</span>
+        </div>
+        <div class="section-row">
+          <input type="text" placeholder="Name" id="s1-name" value="VARC" style="width:100px;margin:0">
+          <input type="number" placeholder="Qs" id="s1-qs" value="24" min="1">
+          <input type="number" placeholder="Mins" id="s1-time" value="40" min="1">
+        </div>
+        <div class="section-row">
+          <input type="text" placeholder="Name" id="s2-name" value="DILR" style="width:100px;margin:0">
+          <input type="number" placeholder="Qs" id="s2-qs" value="20" min="1">
+          <input type="number" placeholder="Mins" id="s2-time" value="40" min="1">
+        </div>
+        <div class="section-row">
+          <input type="text" placeholder="Name" id="s3-name" value="QA" style="width:100px;margin:0">
+          <input type="number" placeholder="Qs" id="s3-qs" value="22" min="1">
+          <input type="number" placeholder="Mins" id="s3-time" value="40" min="1">
+        </div>
+      </div>
+    </div>
+
+    <!-- Answer Key -->
+    <div class="setup-card">
+      <h3>Answer Key (Optional)</h3>
+      <p style="font-size:12px;color:var(--grey);margin-bottom:8px;">
+        One per line. MCQ: <code>1-A</code> or <code>1.C</code> or <code>1 B</code><br>
+        TITA (numeric): <code>5-42</code> or <code>5-3.14</code>
+      </p>
+      <textarea id="answer-key-input" rows="9" placeholder="1-A&#10;2-C&#10;3-B&#10;4-D&#10;5-A&#10;6-24&#10;7-B&#10;8-C&#10;..."></textarea>
+    </div>
+
+    <!-- PDF Upload -->
+    <div class="setup-card">
+      <h3>Upload PDF</h3>
+      <div class="file-drop" id="pdf-drop" onclick="document.getElementById('pdf-file').click()">
+        <input type="file" id="pdf-file" accept=".pdf" onchange="handlePdf(this.files[0])">
+        <div style="font-size:36px;">📄</div>
+        <div style="margin-top:8px;font-weight:bold;font-size:15px;">Click or drag PDF here</div>
+        <div style="font-size:12px;margin-top:4px;">Text will be extracted automatically</div>
+      </div>
+      <div id="pdf-status" style="margin-top:8px;font-size:12px;color:var(--grey);min-height:18px;"></div>
+    </div>
+
+    <!-- Paste Text -->
+    <div class="setup-card">
+      <h3>Paste Questions</h3>
+      <p style="font-size:12px;color:var(--grey);margin-bottom:8px;">
+        Format: <code>1. Question text</code> then options <code>(A) opt</code> / <code>A) opt</code> / <code>A. opt</code><br>
+        TITA questions: just question, no options
+      </p>
+      <textarea id="questions-text" rows="9" placeholder="1. If the sum of two numbers is 18 and product is 72, sum of squares is?&#10;(A) 162&#10;(B) 180&#10;(C) 144&#10;(D) 196&#10;&#10;2. The next question goes here...&#10;(A) Option one&#10;(B) Option two&#10;(C) Option three&#10;(D) Option four"></textarea>
+      <button class="btn btn-blue" style="margin-top:8px;width:100%;" onclick="parseFromText()">🔍 Parse Questions from Text</button>
+    </div>
+
+    <!-- Preview -->
+    <div class="setup-card full" id="preview-card" style="display:none;">
+      <h3>Parsed Questions Preview</h3>
+      <div id="questions-preview"></div>
+    </div>
+
+    <div id="setup-status" class="status-msg"></div>
+
+    <button class="start-btn" onclick="startExam()">🚀 START EXAM</button>
+  </div>
+  </div>
+</div>
+
+<!-- ==================== EXAM ==================== -->
+<div id="exam-screen" class="screen">
+  <div class="exam-header">
+    <div>
+      <div class="title" id="exam-title">CAT Mock Test</div>
+      <div class="subtitle" id="exam-subtitle">Tata Consultancy Services — IIM Admission Test</div>
+    </div>
+    <div style="text-align:center;">
+      <div style="font-size:10px;color:#90caf9;margin-bottom:2px;">TIME REMAINING</div>
+      <div class="timer-box" id="timer-display">02:00:00</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="btn btn-red" onclick="confirmSubmit()">Submit Test</button>
+    </div>
+  </div>
+  <div class="section-tabs" id="section-tabs"></div>
+  <div class="exam-body">
+    <!-- Question Panel -->
+    <div class="question-panel" id="question-panel">
+      <div class="q-top-bar">
+        <span id="q-num-bar">Question 1 of 66</span>
+        <span class="q-type-badge" id="q-type-badge">MCQ</span>
+      </div>
+      <div class="q-content">
+        <div class="q-text" id="q-text"></div>
+        <ul class="options-list" id="q-options"></ul>
+      </div>
+      <div class="action-bar">
+        <button class="btn btn-green" onclick="saveAndNext()">✓ Save &amp; Next</button>
+        <button class="btn btn-purple" onclick="markAndNext()">🏁 Mark for Review &amp; Next</button>
+        <button class="btn btn-grey" onclick="clearResponse()">✕ Clear Response</button>
+        <div class="nav-btns">
+          <button class="btn btn-blue" onclick="prevQ()">◀ Back</button>
+          <button class="btn btn-blue" onclick="nextQ()">Next ▶</button>
+        </div>
+      </div>
+    </div>
+    <!-- Palette Panel -->
+    <div class="palette-panel">
+      <div class="palette-header">Question Palette</div>
+      <div class="palette-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--not-visited)"></div>Not Visited</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--visited)"></div>Visited, Not Answered</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--answered)"></div>Answered</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--marked)"></div>Marked for Review</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--answered-marked)"></div>Answered &amp; Marked</div>
+      </div>
+      <div class="palette-grid" id="palette-grid"></div>
+      <button class="submit-section-btn" onclick="confirmSubmit()">Submit Test</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== RESULTS ==================== -->
+<div id="results-screen" class="screen">
+  <div class="results-header">
+    <div>
+      <div style="font-size:18px;font-weight:bold;" id="results-title">Results</div>
+      <div style="font-size:12px;color:#90caf9;" id="results-date"></div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-grey" onclick="showHome()">🏠 Home</button>
+      <button class="btn btn-blue" onclick="showSetup()">📝 New Exam</button>
+    </div>
+  </div>
+  <div class="results-body" id="results-body"></div>
+</div>
+
+<!-- Confirm Dialog -->
+<div class="dialog-overlay" id="confirm-dialog">
+  <div class="dialog-box">
+    <h3>⚠️ Submit Test?</h3>
+    <p id="confirm-msg">Are you sure?</p>
+    <div class="dialog-btns">
+      <button class="btn btn-grey" onclick="closeDialog('confirm-dialog')">Cancel</button>
+      <button class="btn btn-red" onclick="submitExam()">Yes, Submit</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===================== PDF.js =====================
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ===================== STATE =====================
+let examCfg = { name:'', totalTime:7200, sections:[], questions:[], answerKey:{} };
+let state = {};
+let parsedQs = [];
+
+// ===================== NAVIGATION =====================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function showHome() { clearTimers(); renderAttempts(); showScreen('home-screen'); }
+function showSetup() { clearTimers(); showScreen('setup-screen'); }
+function toggleSections(el) {
+  document.getElementById('sections-config').style.display = el.checked ? 'block' : 'none';
+}
+
+// ===================== PDF HANDLING =====================
+async function handlePdf(file) {
+  if (!file) return;
+  const st = document.getElementById('pdf-status');
+  st.style.color = 'var(--grey)';
+  st.textContent = '⏳ Extracting text...';
+  try {
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    let txt = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      // Reconstruct lines from items
+      const items = content.items;
+      let line = '';
+      let lastY = null;
+      for (const item of items) {
+        const y = item.transform ? Math.round(item.transform[5]) : null;
+        if (lastY !== null && y !== null && Math.abs(y - lastY) > 3) {
+          txt += line.trimEnd() + '\n';
+          line = '';
+        }
+        line += item.str;
+        lastY = y;
+      }
+      if (line.trim()) txt += line + '\n';
+      txt += '\n';
+    }
+    document.getElementById('questions-text').value = txt;
+    st.style.color = '#2e7d32';
+    st.textContent = `✅ ${pdf.numPages} pages extracted. Click "Parse Questions from Text".`;
+  } catch(e) {
+    st.style.color = '#c62828';
+    st.textContent = '❌ Error: ' + e.message;
+  }
+}
+
+// Drag & drop
+const dropZone = document.getElementById('pdf-drop');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.name.endsWith('.pdf')) handlePdf(f);
+});
+
+// ===================== QUESTION PARSER =====================
+function parseFromText() {
+  const text = document.getElementById('questions-text').value.trim();
+  if (!text) { setStatus('Paste some questions first!', 'error'); return; }
+  parsedQs = parseQuestions(text);
+  if (parsedQs.length === 0) {
+    setStatus('Could not parse questions. Format: "1. Question text" then "(A) option"', 'error');
+    return;
+  }
+  renderPreview();
+  setStatus(`✅ Parsed ${parsedQs.length} questions! (${parsedQs.filter(q=>q.type==='MCQ').length} MCQ, ${parsedQs.filter(q=>q.type==='TITA').length} TITA)`, 'success');
+}
+
+function parseQuestions(text) {
+  const lines = text.split('\n');
+  const qs = [];
+  let cur = null;
+  let qNum = 1;
+
+  const ignoreRe = /^(Correct Answer|Video Explanation|Explanation|Check Stats)$/i;
+  const catHeaderRe = /^CAT\s+\d{4}/i;
+  const qRe = /^(?:Q\.?\s*)?(\d+)[.)]\s+(.+)/i;
+  const optRe = /^\(?([A-Ea-e])\)?[.)]\s*(.+)/;
+
+  function finalizeQ() {
+    if (!cur) return;
+    
+    if (Object.keys(cur.options).length === 0 && cur.raw.length >= 5) {
+      const possibleOpts = cur.raw.slice(-4);
+      if (possibleOpts.every(l => l.length < 80)) {
+        cur.options = { 'A': possibleOpts[0], 'B': possibleOpts[1], 'C': possibleOpts[2], 'D': possibleOpts[3] };
+        cur.raw = cur.raw.slice(0, -4); 
+      }
+    }
+    
+    cur.text = cur.raw.join('\n').replace(/^Q\d+\.\s*/i, '');
+    cur.type = Object.keys(cur.options).length >= 2 ? 'MCQ' : 'TITA';
+    
+    if (cur.text.trim()) {
+      if (cur.overrideNum) qNum = cur.overrideNum;
+      qs.push({ num: qNum++, text: cur.text, options: cur.options, type: cur.type });
+    }
+    cur = null;
+  }
+
+  for (let raw of lines) {
+    const line = raw.trim();
+    if (!line || ignoreRe.test(line)) continue;
+
+    if (catHeaderRe.test(line)) {
+      finalizeQ();
+      cur = { raw: [], options: {} };
+      continue;
+    }
+
+    const qm = line.match(qRe);
+    const om = line.match(optRe);
+
+    if (qm) {
+      finalizeQ();
+      cur = { raw: [qm[2].trim()], options: {}, overrideNum: parseInt(qm[1]) };
+    } else if (om && cur) {
+      cur.options[om[1].toUpperCase()] = om[2].trim();
+    } else {
+      if (!cur) cur = { raw: [], options: {} };
+      cur.raw.push(line);
+    }
+  }
+  
+  finalizeQ();
+  return qs;
+}
+
+function renderMath() {
+  if (window.MathJax) {
+    MathJax.typesetClear();
+    MathJax.typesetPromise().catch(err => console.log(err));
+  }
+}
+
+function renderPreview() {
+  const card = document.getElementById('preview-card');
+  const cont = document.getElementById('questions-preview');
+  card.style.display = 'block';
+  const show = parsedQs.slice(0, 3);
+  cont.innerHTML = show.map(q => `
+    <div style="padding:10px;border:1px solid var(--border);border-radius:4px;margin-bottom:8px;font-size:13px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+        <div><strong style="color:var(--blue)">Q${q.num}.</strong> ${q.text.slice(0,120)}${q.text.length>120?'...':''}</div>
+        <span class="q-type-badge ${q.type==='TITA'?'tita':''}">${q.type}</span>
+      </div>
+      ${q.type==='MCQ' ? `<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;">
+        ${Object.entries(q.options).map(([k,v])=>`<span style="font-size:11px;background:#e8eaf6;padding:2px 8px;border-radius:10px;"><b>(${k})</b> ${v.slice(0,40)}${v.length>40?'...':''}</span>`).join('')}
+      </div>` : `<div style="margin-top:4px;font-size:11px;color:var(--accent);">Numeric answer required</div>`}
+    </div>
+  `).join('') + (parsedQs.length > 3 ? `<div style="color:var(--grey);font-size:12px;padding:4px;">...and ${parsedQs.length - 3} more questions</div>` : '');
+setTimeout(renderMath, 50); // <--- Wake up MathJax
+}
+
+// ===================== ANSWER KEY =====================
+function parseAnswerKey(text) {
+  const key = {};
+  for (const line of text.split('\n')) {
+    const m = line.trim().match(/(\d+)[\s\-.,:]+([A-Ea-e]|-?\d+\.?\d*)/);
+    if (m) {
+      const num = parseInt(m[1]);
+      const ans = /^[A-Ea-e]$/.test(m[2]) ? m[2].toUpperCase() : m[2];
+      key[num] = ans;
+    }
+  }
+  return key;
+}
+
+// ===================== START EXAM =====================
+function startExam() {
+  if (parsedQs.length === 0) { setStatus('Parse questions first!', 'error'); return; }
+
+  const name = document.getElementById('exam-name').value.trim() || 'CAT Mock Test';
+  const totalMins = parseInt(document.getElementById('exam-time').value) || 120;
+  const useSections = document.getElementById('use-sections').checked;
+  const keyText = document.getElementById('answer-key-input').value;
+
+  examCfg.name = name;
+  examCfg.totalTime = totalMins * 60;
+  examCfg.questions = parsedQs;
+  examCfg.answerKey = parseAnswerKey(keyText);
+
+  if (useSections) {
+    const s = [
+      { name: document.getElementById('s1-name').value||'VARC', count: parseInt(document.getElementById('s1-qs').value)||24, time: (parseInt(document.getElementById('s1-time').value)||40)*60 },
+      { name: document.getElementById('s2-name').value||'DILR', count: parseInt(document.getElementById('s2-qs').value)||20, time: (parseInt(document.getElementById('s2-time').value)||40)*60 },
+      { name: document.getElementById('s3-name').value||'QA',   count: parseInt(document.getElementById('s3-qs').value)||22, time: (parseInt(document.getElementById('s3-time').value)||40)*60 },
+    ];
+    let idx = 0;
+    examCfg.sections = s.filter(x=>x.count>0).map(x => { const r = {...x, start:idx}; idx+=x.count; return r; });
+  } else {
+    examCfg.sections = [{ name:'All Questions', start:0, count:parsedQs.length, time:totalMins*60 }];
+  }
+
+  // Init state
+  state = {
+    curSection: 0, curQ: 0,
+    answers: {}, qStatus: {}, timeSpent: {},
+    startTime: Date.now(), qStartTime: Date.now(),
+    timerInterval: null, done: false
+  };
+  parsedQs.forEach((_,i) => { state.qStatus[i] = 'not-visited'; state.timeSpent[i] = 0; });
+
+  buildExamUI();
+  showScreen('exam-screen');
+  startTimer();
+  loadQ(0);
+}
+
+// ===================== EXAM UI =====================
+function buildExamUI() {
+  document.getElementById('exam-title').textContent = examCfg.name;
+  document.getElementById('section-tabs').innerHTML = examCfg.sections.map((s,i) =>
+    `<div class="section-tab ${i===0?'active':''}" onclick="switchSection(${i})">${s.name} (${s.count})</div>`
+  ).join('');
+}
+
+function switchSection(idx) {
+  saveTime();
+  state.curSection = idx;
+  document.querySelectorAll('.section-tab').forEach((t,i) => t.classList.toggle('active', i===idx));
+  goToQ(examCfg.sections[idx].start);
+}
+
+function loadQ(idx) {
+  if (idx < 0 || idx >= examCfg.questions.length) return;
+  saveTime();
+  state.curQ = idx;
+  state.qStartTime = Date.now();
+  if (state.qStatus[idx] === 'not-visited') state.qStatus[idx] = 'visited';
+
+  const q = examCfg.questions[idx];
+  const sec = getSec(idx);
+  const posInSec = idx - sec.start + 1;
+
+  document.getElementById('q-num-bar').textContent =
+    `${sec.name} — Q${posInSec}/${sec.count}  (Overall: ${idx+1}/${examCfg.questions.length})`;
+  document.getElementById('q-type-badge').textContent = q.type;
+  document.getElementById('q-type-badge').className = `q-type-badge ${q.type==='TITA'?'tita':''}`;
+
+  document.getElementById('q-text').innerHTML = `<strong style="color:var(--blue)">Q${q.num}.</strong>&nbsp;&nbsp;${escHtml(q.text)}`;
+
+  const optEl = document.getElementById('q-options');
+  if (q.type === 'MCQ') {
+    optEl.innerHTML = Object.entries(q.options).map(([k,v]) => `
+      <li class="option-item ${state.answers[idx]===k?'selected':''}" onclick="selectOpt(${idx},'${k}')">
+        <span class="option-label">(${k})</span><span>${escHtml(v)}</span>
+      </li>`).join('');
+  } else {
+    optEl.innerHTML = `<li style="padding:4px 0;">
+      <div class="tita-wrap">
+        <label>Enter your numeric answer:</label>
+        <input type="text" class="tita-input" id="tita-inp" value="${state.answers[idx]||''}"
+               oninput="saveTita(${idx},this.value)" placeholder="Type answer here">
+      </div></li>`;
+    setTimeout(() => { const t = document.getElementById('tita-inp'); if(t) t.focus(); }, 50);
+  }
+  renderPalette();
+	setTimeout(renderMath, 50); // <--- Wake up MathJax
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function getSec(idx) {
+  for (const s of examCfg.sections) if (idx >= s.start && idx < s.start + s.count) return s;
+  return examCfg.sections[0];
+}
+
+function renderPalette() {
+  const sec = examCfg.sections[state.curSection];
+  let html = '';
+  const end = Math.min(sec.start + sec.count, examCfg.questions.length);
+  for (let i = sec.start; i < end; i++) {
+    const st = state.qStatus[i] || 'not-visited';
+    html += `<button class="q-btn ${st} ${i===state.curQ?'current':''}" onclick="goToQ(${i})" title="Q${i+1}">${i+1}</button>`;
+  }
+  document.getElementById('palette-grid').innerHTML = html;
+}
+
+function selectOpt(idx, key) {
+  state.answers[idx] = key;
+  state.qStatus[idx] = state.qStatus[idx] === 'marked' ? 'answered-marked' : 'answered';
+  loadQ(idx);
+}
+
+function saveTita(idx, val) {
+  if (val.trim()) {
+    state.answers[idx] = val.trim();
+    state.qStatus[idx] = 'answered';
+  } else {
+    delete state.answers[idx];
+    state.qStatus[idx] = 'visited';
+  }
+  renderPalette();
+}
+
+function saveTime() {
+  const elapsed = (Date.now() - state.qStartTime) / 1000;
+  state.timeSpent[state.curQ] = (state.timeSpent[state.curQ] || 0) + elapsed;
+  state.qStartTime = Date.now();
+}
+
+// ===================== BUTTONS =====================
+function saveAndNext() {
+  const idx = state.curQ;
+  const q = examCfg.questions[idx];
+  if (q.type === 'TITA') {
+    const t = document.getElementById('tita-inp');
+    if (t && t.value.trim()) { state.answers[idx] = t.value.trim(); }
+  }
+  if (state.answers[idx] !== undefined) {
+    state.qStatus[idx] = state.qStatus[idx] === 'marked' ? 'answered-marked' : 'answered';
+  }
+  nextQ();
+}
+
+function markAndNext() {
+  const idx = state.curQ;
+  const q = examCfg.questions[idx];
+  if (q.type === 'TITA') {
+    const t = document.getElementById('tita-inp');
+    if (t && t.value.trim()) {
+      state.answers[idx] = t.value.trim();
+      state.qStatus[idx] = 'answered-marked';
+    } else {
+      state.qStatus[idx] = 'marked';
+    }
+  } else {
+    state.qStatus[idx] = state.answers[idx] ? 'answered-marked' : 'marked';
+  }
+  nextQ();
+}
+
+function clearResponse() {
+  const idx = state.curQ;
+  delete state.answers[idx];
+  state.qStatus[idx] = 'visited';
+  loadQ(idx);
+}
+
+function nextQ() {
+  const sec = examCfg.sections[state.curSection];
+  const last = Math.min(sec.start + sec.count - 1, examCfg.questions.length - 1);
+  if (state.curQ < last) goToQ(state.curQ + 1);
+}
+
+function prevQ() {
+  const sec = examCfg.sections[state.curSection];
+  if (state.curQ > sec.start) goToQ(state.curQ - 1);
+}
+
+function goToQ(idx) {
+  // Update section if needed
+  for (let i = 0; i < examCfg.sections.length; i++) {
+    const s = examCfg.sections[i];
+    if (idx >= s.start && idx < s.start + s.count) {
+      if (state.curSection !== i) {
+        state.curSection = i;
+        document.querySelectorAll('.section-tab').forEach((t,ti) => t.classList.toggle('active', ti===i));
+      }
+      break;
+    }
+  }
+  loadQ(idx);
+}
+
+// ===================== TIMER =====================
+function startTimer() {
+  clearTimers();
+  const timerEl = document.getElementById('timer-display');
+  state.timerInterval = setInterval(() => {
+    if (state.done) return;
+    const elapsed = Math.floor((Date.now() - state.startTime) / 1000);
+    const rem = examCfg.totalTime - elapsed;
+    if (rem <= 0) { clearTimers(); submitExam(); return; }
+    const h = Math.floor(rem/3600), m = Math.floor((rem%3600)/60), s = rem%60;
+    timerEl.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+    timerEl.className = rem <= 300 ? 'timer-box warning' : 'timer-box';
+  }, 500);
+}
+
+function pad(n) { return String(n).padStart(2,'0'); }
+function clearTimers() { if (state.timerInterval) clearInterval(state.timerInterval); }
+
+// ===================== SUBMIT =====================
+function confirmSubmit() {
+  const answered = Object.values(state.qStatus).filter(s => s==='answered'||s==='answered-marked').length;
+  const total = examCfg.questions.length;
+  document.getElementById('confirm-msg').innerHTML =
+    `<strong>${answered}</strong> of <strong>${total}</strong> questions answered.<br>${total-answered} will be left unattempted.`;
+  document.getElementById('confirm-dialog').style.display = 'flex';
+}
+
+function closeDialog(id) { document.getElementById(id).style.display = 'none'; }
+
+function submitExam() {
+  closeDialog('confirm-dialog');
+  clearTimers();
+  saveTime();
+  state.done = true;
+
+  const elapsed = Math.floor((Date.now() - state.startTime) / 1000);
+  const attempt = {
+    id: Date.now(), name: examCfg.name,
+    date: new Date().toLocaleString('en-IN'),
+    elapsed,
+    questions: examCfg.questions,
+    sections: examCfg.sections,
+    answerKey: examCfg.answerKey,
+    answers: {...state.answers},
+    qStatus: {...state.qStatus},
+    timeSpent: {...state.timeSpent}
+  };
+  saveAttempt(attempt);
+  showResults(attempt);
+}
+
+// ===================== RESULTS =====================
+function showResults(attempt) {
+  document.getElementById('results-title').textContent = attempt.name + ' — Results';
+  document.getElementById('results-date').textContent = attempt.date;
+
+  const hasKey = Object.keys(attempt.answerKey || {}).length > 0;
+  let totalScore = 0, correct = 0, wrong = 0, unattempted = 0;
+
+  const secRes = attempt.sections.map(s => ({...s, score:0, correct:0, wrong:0, unattempted:0, attempted:0}));
+
+  attempt.questions.forEach((q, i) => {
+    const ans = attempt.answers[i];
+    const key = attempt.answerKey[q.num];
+    const si = attempt.sections.findIndex(s => i >= s.start && i < s.start + s.count);
+    const sr = si >= 0 ? secRes[si] : null;
+
+    if (ans === undefined || ans === '') {
+      unattempted++;
+      if (sr) sr.unattempted++;
+    } else {
+      if (sr) sr.attempted++;
+      if (hasKey && key) {
+        const ok = String(ans).trim().toUpperCase() === String(key).trim().toUpperCase();
+        if (ok) {
+          correct++; totalScore += 3;
+          if (sr) { sr.correct++; sr.score += 3; }
+        } else {
+          wrong++;
+          const pen = -1;
+          totalScore += pen;
+          if (sr) { sr.wrong++; sr.score += pen; }
+        }
+      }
+    }
+  });
+
+  const attempted = attempt.questions.length - unattempted;
+  const maxT = Math.max(...Object.values(attempt.timeSpent).map(Number), 1);
+
+  let html = `<div class="score-cards">`;
+  if (hasKey) {
+    html += `
+      <div class="score-card"><div class="lbl">Total Score</div><div class="val" style="color:${totalScore>=0?'#2e7d32':'#c62828'}">${totalScore}</div><div class="sub">out of ${attempt.questions.length*3}</div></div>
+      <div class="score-card"><div class="lbl">Correct</div><div class="val c-correct">${correct}</div></div>
+      <div class="score-card"><div class="lbl">Incorrect</div><div class="val c-wrong">${wrong}</div></div>
+      <div class="score-card"><div class="lbl">Accuracy</div><div class="val" style="font-size:22px;">${attempted>0?Math.round(correct/attempted*100):0}%</div><div class="sub">of attempted</div></div>
+    `;
+  }
+  html += `
+    <div class="score-card"><div class="lbl">Attempted</div><div class="val">${attempted}</div><div class="sub">of ${attempt.questions.length}</div></div>
+    <div class="score-card"><div class="lbl">Unattempted</div><div class="val c-skip">${unattempted}</div></div>
+    <div class="score-card"><div class="lbl">Time Used</div><div class="val" style="font-size:20px;">${fmtTime(attempt.elapsed)}</div></div>
+  </div>`;
+
+  // Section breakdown
+  if (attempt.sections.length > 1) {
+    html += `<div class="res-section"><h3>Section-wise Breakdown</h3><table><thead><tr>
+      <th>Section</th>${hasKey?'<th>Score</th><th>Correct</th><th>Wrong</th>':''}<th>Attempted</th><th>Unattempted</th>${hasKey?'<th>Accuracy</th>':''}
+    </tr></thead><tbody>`;
+    secRes.forEach(s => {
+      html += `<tr>
+        <td><strong>${s.name}</strong></td>
+        ${hasKey?`<td class="${s.score>=0?'c-correct':'c-wrong'}">${s.score}</td><td class="c-correct">${s.correct}</td><td class="c-wrong">${s.wrong}</td>`:''}
+        <td>${s.attempted}</td>
+        <td class="c-skip">${s.unattempted}</td>
+        ${hasKey?`<td>${s.attempted>0?Math.round(s.correct/s.attempted*100):0}%</td>`:''}
+      </tr>`;
+    });
+    html += `</tbody></table></div>`;
+  }
+
+  // Time analysis table
+  html += `<div class="res-section"><h3>Question-wise Analysis</h3><table><thead><tr>
+    <th>Q#</th><th>Type</th><th>Time</th><th>Time Bar</th>
+    ${hasKey?'<th>Your Ans</th><th>Key</th><th>Result</th>':'<th>Your Ans</th><th>Status</th>'}
+  </tr></thead><tbody>`;
+
+  attempt.questions.forEach((q, i) => {
+    const t = Math.round(attempt.timeSpent[i] || 0);
+    const ans = attempt.answers[i];
+    const key = attempt.answerKey[q.num];
+    const bw = Math.round((t / maxT) * 100);
+    const st = attempt.qStatus[i] || 'not-visited';
+
+    let cls = 'c-skip', res = '0';
+    if (ans !== undefined && ans !== '') {
+      if (hasKey && key) {
+        const ok = String(ans).trim().toUpperCase() === String(key).trim().toUpperCase();
+        cls = ok ? 'c-correct' : 'c-wrong';
+        res = ok ? `+3` : `-1`;
+      } else {
+        cls = 'c-correct'; res = 'Answered';
+      }
+    }
+
+    const cols = hasKey ? 7 : 6;
+    let optHtml = '';
+    if (q.type === 'MCQ') {
+      optHtml = Object.entries(q.options).map(([k,v]) => `<div style="margin-top:4px;"><b>(${k})</b> ${v}</div>`).join('');
+    }
+
+    html += `<tr class="clickable-row" onclick="toggleQDetail(${i})">
+      <td><strong>Q${q.num}</strong></td>
+      <td><span style="font-size:11px;background:${q.type==='MCQ'?'#e8eaf6':'#fff3e0'};padding:1px 6px;border-radius:8px;">${q.type}</span></td>
+      <td>${t}s</td>
+      <td><div class="bar-wrap"><div class="bar-fill" style="width:${bw}%"></div></div></td>
+      ${hasKey?`<td>${ans||'—'}</td><td>${key||'—'}</td><td class="${cls}">${res}</td>`:`<td>${ans||'—'}</td><td class="${cls}">${res}</td>`}
+    </tr>
+    <tr class="q-detail-row" id="q-detail-${i}">
+      <td colspan="${cols}">
+        <div class="q-detail-box"><strong>Question ${q.num}:</strong><br>${q.text}<br>${optHtml}</div>
+      </td>
+    </tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+  document.getElementById('results-body').innerHTML = html;
+  showScreen('results-screen');
+}
+
+function fmtTime(s) {
+  if (s < 60) return s + 's';
+  return `${Math.floor(s/60)}m ${s%60}s`;
+}
+
+// ===================== LOCALSTORAGE =====================
+function saveAttempt(attempt) {
+  const arr = getAttempts();
+  arr.unshift(attempt);
+  try { localStorage.setItem('cat_prep_attempts', JSON.stringify(arr.slice(0, 25))); } catch(e) {}
+}
+
+function getAttempts() {
+  try { return JSON.parse(localStorage.getItem('cat_prep_attempts') || '[]'); } catch { return []; }
+}
+
+function deleteAttempt(id, e) {
+  e.stopPropagation();
+  const arr = getAttempts().filter(a => a.id !== id);
+  try { localStorage.setItem('cat_prep_attempts', JSON.stringify(arr)); } catch {}
+  renderAttempts();
+}
+
+function renderAttempts() {
+  const cont = document.getElementById('attempts-container');
+  const arr = getAttempts();
+  if (arr.length === 0) {
+    cont.innerHTML = '<div class="no-attempts"><div>📋</div><div style="font-weight:bold;margin-bottom:4px;">No attempts yet</div><div style="font-size:12px;">Start a new exam to begin tracking your progress</div></div>';
+    return;
+  }
+  cont.innerHTML = '<div class="attempts-grid">' + arr.map(a => {
+    const hasKey = Object.keys(a.answerKey||{}).length > 0;
+    let score = '—', scoreColor = 'var(--blue)';
+    if (hasKey) {
+      let s = 0;
+      a.questions.forEach((q,i) => {
+        const ans = a.answers[i], key = a.answerKey[q.num];
+        if (ans && key) {
+          if (String(ans).trim().toUpperCase() === String(key).trim().toUpperCase()) s += 3;
+          else s -= 1;
+        }
+      });
+      score = s + ' pts'; scoreColor = s >= 0 ? '#2e7d32' : '#c62828';
+    } else {
+      score = Object.keys(a.answers||{}).length + ' attempted';
+    }
+    return `<div class="attempt-card" onclick="loadAttempt(${a.id})">
+      <button class="attempt-del" onclick="deleteAttempt(${a.id},event)" title="Delete">✕</button>
+      <div class="attempt-name">${a.name}</div>
+      <div class="attempt-date">${a.date}</div>
+      <div class="attempt-score" style="color:${scoreColor}">${score}</div>
+      <div class="attempt-meta">${a.questions.length} questions · ${fmtTime(a.elapsed)}</div>
+    </div>`;
+  }).join('') + '</div>';
+}
+
+function loadAttempt(id) {
+  const a = getAttempts().find(x => x.id === id);
+  if (a) showResults(a);
+}
+
+// ===================== SETUP STATUS =====================
+function setStatus(msg, type) {
+  const el = document.getElementById('setup-status');
+  el.textContent = msg;
+  el.className = `status-msg ${type}`;
+  el.style.display = 'block';
+  if (type !== 'info') setTimeout(() => el.style.display = 'none', 5000);
+}
+
+// ===================== INIT =====================
+function toggleQDetail(idx) {
+  // close all other open boxes
+  document.querySelectorAll('.q-detail-row').forEach(el => {
+    if (el.id !== `q-detail-${idx}`) el.classList.remove('open');
+  });
+  
+  // open or close clicked box
+  const target = document.getElementById(`q-detail-${idx}`);
+  target.classList.toggle('open');
+  
+  // wake up math drawing if open
+  if (target.classList.contains('open')) {
+    setTimeout(renderMath, 50);
+  }
+}
+renderAttempts();
+</script>
+</body>
+</html>

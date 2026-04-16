@@ -474,6 +474,7 @@ code { background: #e8eaf6; padding: 1px 5px; border-radius: 3px; font-size: 11p
     </div>
     <div style="display:flex;gap:8px;">
       <button class="btn btn-grey" onclick="showHome()">🏠 Home</button>
+      <button class="btn btn-orange" onclick="reattemptCurrent()">🔄 Reattempt</button>
       <button class="btn btn-blue" onclick="showSetup()">📝 New Exam</button>
     </div>
   </div>
@@ -511,9 +512,10 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
 // ===================== STATE =====================
-let examCfg = { name:'', totalTime:7200, sections:[], questions:[], answerKey:{} }; // <-- Add this line
+let examCfg = { name:'', totalTime:7200, sections:[], questions:[], answerKey:{} };
 let state = {};
 let parsedQs = [];
+let currentViewedAttempt = null;
 
 // ===================== NAVIGATION =====================
 function showScreen(id) {
@@ -939,7 +941,9 @@ function submitExam() {
 }
 
 // ===================== RESULTS =====================
+// ===================== RESULTS =====================
 function showResults(attempt) {
+  currentViewedAttempt = attempt;
   document.getElementById('results-title').textContent = attempt.name + ' — Results';
   document.getElementById('results-date').textContent = attempt.date;
 
@@ -1169,6 +1173,39 @@ function toggleQDetail(idx) {
       setTimeout(renderMath, 50);
     }
   }
+}
+
+function reattemptCurrent() {
+  if (!currentViewedAttempt) return;
+
+  // Load old config
+  examCfg.name = currentViewedAttempt.name;
+  examCfg.questions = currentViewedAttempt.questions;
+  examCfg.sections = currentViewedAttempt.sections;
+  examCfg.answerKey = currentViewedAttempt.answerKey || {};
+  
+  // Recalculate total time from the saved sections
+  examCfg.totalTime = currentViewedAttempt.sections.reduce((sum, sec) => sum + sec.time, 0);
+  if (!examCfg.totalTime) examCfg.totalTime = 7200;
+
+  // Erase all answers and reset timers for a clean slate
+  state = {
+    curSection: 0, curQ: 0,
+    answers: {}, qStatus: {}, timeSpent: {},
+    startTime: Date.now(), qStartTime: Date.now(),
+    timerInterval: null, done: false
+  };
+  
+  examCfg.questions.forEach((_,i) => { 
+    state.qStatus[i] = 'not-visited'; 
+    state.timeSpent[i] = 0; 
+  });
+
+  // Start the fresh exam
+  buildExamUI();
+  showScreen('exam-screen');
+  startTimer();
+  loadQ(0);
 }
 
 // ===================== INIT =====================

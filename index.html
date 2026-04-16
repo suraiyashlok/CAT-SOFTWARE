@@ -511,6 +511,7 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
 // ===================== STATE =====================
+let examCfg = { name:'', totalTime:7200, sections:[], questions:[], answerKey:{} }; // <-- Add this line
 let state = {};
 let parsedQs = [];
 
